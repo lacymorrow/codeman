@@ -46,6 +46,7 @@
     "@builder.io/partytown": "0.10.3",
     "@builder.io/react": "8.0.13",
     "@builder.io/sdk": "6.0.6",
+    "@codesandbox/sdk": "^0.12.0",
     "@fortawesome/fontawesome-svg-core": "6.7.2",
     "@fortawesome/free-solid-svg-icons": "6.7.2",
     "@fortawesome/react-fontawesome": "0.2.2",

@@ -27,6 +27,9 @@ importers:
       '@builder.io/sdk':
         specifier: 6.0.6
         version: 6.0.6(encoding@0.1.13)
+      '@codesandbox/sdk':
+        specifier: ^0.12.0
+        version: 0.12.0
       '@fortawesome/fontawesome-svg-core':
         specifier: 6.7.2
         version: 6.7.2
@@ -1005,6 +1008,10 @@ packages:
 
   '@clack/prompts@0.10.1':
     resolution: {integrity: sha512-Q0T02vx8ZM9XSv9/Yde0jTmmBQufZhPJfYAg2XrrrxWWaZgq1rr8nU8Hv710BQ1dhoP8rtY7YUdpGej2Qza/cw==}
+
+  '@codesandbox/sdk@0.12.0':
+    resolution: {integrity: sha512-pkl/HY5ycidguCQczh8cCkYnd8hVhwwoARgXoXJJwhNVi97oBv2fcN3hhm1ZqXWeQh0z7Qi3mxVvtauuKp5qnQ==}
+    hasBin: true
 
   '@date-fns/tz@1.2.0':
     resolution: {integrity: sha512-LBrd7MiJZ9McsOgxqWX7AaxrDjcFVjWH/tIKJd7pnR7McaslGYOP1QmmiBXdJH/H/yLCT+rcQ7FaPBUxRGUtrg==}
@@ -8258,6 +8265,8 @@ snapshots:
       '@clack/core': 0.4.2
       picocolors: 1.1.1
       sisteransi: 1.0.5
+
+  '@codesandbox/sdk@0.12.0': {}
 
   '@date-fns/tz@1.2.0': {}
 
