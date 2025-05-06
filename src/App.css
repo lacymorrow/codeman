@@ -1,0 +1,220 @@
+:root {
+  --primary-color: #000000;
+  --secondary-color: #ffffff;
+  --accent-color: #ff3e00;
+  --border-color: #000000;
+  --text-color: #000000;
+  --background-color: #ffffff;
+  --container-color: #eeeeee;
+  --border-width: 4px;
+  --spacing-unit: 16px;
+  --font-mono: monospace;
+  --font-sans: 'Helvetica', 'Arial', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background-color: var(--background-color);
+  color: var(--text-color);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: unset;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  max-width: 100%;
+}
+
+.header {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  padding: var(--spacing-unit);
+  border-bottom: var(--border-width) solid var(--border-color);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.title {
+  font-size: 2.5rem;
+  font-weight: bold;
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+}
+
+.main {
+  flex: 1;
+  padding: var(--spacing-unit);
+  display: flex;
+  flex-direction: column;
+}
+
+.browser-container {
+  border: var(--border-width) solid var(--border-color);
+  background-color: var(--container-color);
+  flex: 1;
+  overflow: hidden;
+}
+
+.footer {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  padding: calc(var(--spacing-unit) / 2) var(--spacing-unit);
+  border-top: var(--border-width) solid var(--border-color);
+  text-align: center;
+  font-size: 0.8rem;
+}
+
+/* Brutalist styling for the file browser */
+.repo-browser {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: var(--spacing-unit);
+}
+
+.repo-input-container {
+  display: flex;
+  gap: var(--spacing-unit);
+  margin-bottom: var(--spacing-unit);
+}
+
+.repo-url-input {
+  flex: 1;
+  padding: calc(var(--spacing-unit) / 2);
+  font-family: var(--font-mono);
+  border: var(--border-width) solid var(--border-color);
+  background-color: var(--secondary-color);
+  font-size: 1rem;
+}
+
+.repo-url-input:focus {
+  outline: none;
+  background-color: #ffff00;
+}
+
+.load-repo-button {
+  padding: calc(var(--spacing-unit) / 2) var(--spacing-unit);
+  font-family: var(--font-mono);
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  border: var(--border-width) solid var(--border-color);
+  font-weight: bold;
+  cursor: pointer;
+  text-transform: uppercase;
+  font-size: 1rem;
+}
+
+.load-repo-button:hover {
+  background-color: var(--accent-color);
+}
+
+.load-repo-button:disabled {
+  background-color: #999999;
+  cursor: not-allowed;
+}
+
+.status-message {
+  margin-bottom: var(--spacing-unit);
+  padding: calc(var(--spacing-unit) / 2);
+  border: var(--border-width) solid var(--border-color);
+  background-color: var(--secondary-color);
+  font-family: var(--font-mono);
+}
+
+.status-message.error {
+  background-color: #ff6b6b;
+  color: var(--secondary-color);
+}
+
+.content-container {
+  display: flex;
+  flex: 1;
+  gap: var(--spacing-unit);
+  overflow: hidden;
+}
+
+.file-viewer-container {
+  flex: 1;
+  border: var(--border-width) solid var(--border-color);
+  background-color: var(--secondary-color);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.file-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.file-viewer-header {
+  background-color: var(--primary-color);
+  color: var(--secondary-color);
+  padding: calc(var(--spacing-unit) / 2);
+  border-bottom: var(--border-width) solid var(--border-color);
+}
+
+.file-viewer-header h3 {
+  font-size: 1rem;
+  font-weight: bold;
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-viewer-content {
+  flex: 1;
+  overflow: auto;
+  font-family: var(--font-mono);
+}
+
+.file-viewer-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.file-viewer.empty-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  background-color: var(--container-color);
+  border: var(--border-width) dashed var(--border-color);
+}
+
+.loading, .error-message, .folder-message {
+  padding: var(--spacing-unit);
+  border: var(--border-width) solid var(--border-color);
+  background-color: var(--container-color);
+  font-family: var(--font-mono);
+  margin-bottom: var(--spacing-unit);
+}
+
+.error-message {
+  background-color: #ff6b6b;
+  color: var(--secondary-color);
+}
+
+.folder-message {
+  background-color: #ffd966;
+}
+
+/* Remove react-complex-tree override styles */
