@@ -39,6 +39,7 @@ export default function RepoBrowser() {
     Record<TreeItemIndex, TreeItem<FileTreeData>>
   >({});
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [sandboxEmbedUrl, setSandboxEmbedUrl] = useState<string | null>(null);
 
   const isValidGitHubUrl = (url: string) => {
     const githubRegex =
@@ -84,6 +85,20 @@ export default function RepoBrowser() {
     setTreeData({});
     setSelectedFile(null);
     setDefaultBranch(null);
+    setSandboxEmbedUrl(null);
+
+    // Retrieve API Key from environment variables
+    // WARNING: Using NEXT_PUBLIC_ prefix makes the key available on the client-side.
+    // This is a security risk. In production, this API call should be made from a backend route.
+    const codesandboxApiKey = process.env.NEXT_PUBLIC_CODESANDBOX_API_KEY;
+    if (!codesandboxApiKey) {
+      setStatus(
+        "Error: CodeSandbox API Key is missing. Please set NEXT_PUBLIC_CODESANDBOX_API_KEY."
+      );
+      setIsError(true);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       setStatus("Fetching repository metadata...");
@@ -114,8 +129,131 @@ export default function RepoBrowser() {
         console.warn(
           "File tree is truncated. Some files/folders might be missing."
         );
+        // Potentially, we could set an error status here or try to fetch the full tree via other means if critical
       }
 
+      // --- Step 1: Fetch content for all files ---
+      setStatus("Fetching file contents...");
+      const filesForApi: {
+        [filePath: string]: { content: string | object; isBinary: boolean };
+      } = {};
+      let filesFetched = 0;
+      const totalFiles = treeResult.tree.filter(
+        (item) => item.type === "blob"
+      ).length;
+
+      for (const item of treeResult.tree) {
+        if (item.type === "blob") {
+          // Only process files (blobs)
+          try {
+            // Heuristic to detect binary files (can be improved)
+            // For now, let's assume common text file extensions are not binary.
+            // And that the Define API might handle raw GitHub URLs even for text if content is a URL.
+            // However, docs imply string content for non-binary.
+            const isLikelyTextFile =
+              /\.(jsx?|tsx?|json|html|css|md|txt|yaml|yml|xml|svg)$/i.test(
+                item.path
+              );
+
+            // For Define API, content for non-binary files should be the actual string.
+            // Content for binary files can be a URL.
+            const rawFileUrl = `https://raw.githubusercontent.com/${info.user}/${info.repo}/${branch}/${item.path}`;
+
+            if (isLikelyTextFile) {
+              const fileContentResponse = await fetch(rawFileUrl);
+              if (!fileContentResponse.ok) {
+                console.warn(
+                  `Failed to fetch content for ${item.path}: ${fileContentResponse.status}`
+                );
+                // Skip this file or handle error appropriately
+                continue;
+              }
+              const fileContent = await fileContentResponse.text();
+              filesForApi[item.path] = {
+                content: fileContent,
+                isBinary: false,
+              };
+            } else {
+              // For binary files, provide the URL as content
+              filesForApi[item.path] = { content: rawFileUrl, isBinary: true };
+            }
+            filesFetched++;
+            setStatus(
+              `Fetching file contents... (${filesFetched}/${totalFiles})`
+            );
+          } catch (fileError: any) {
+            console.error(
+              `Error fetching content for ${item.path}:`,
+              fileError
+            );
+            // Optionally, add this file with an error message or skip it
+          }
+        }
+      }
+
+      // Ensure package.json is present, as CSB uses it to determine the environment.
+      // If not present in filesForApi, add a minimal one.
+      if (!filesForApi["package.json"]) {
+        console.warn(
+          "No package.json found in repo. Adding a minimal one for CodeSandbox."
+        );
+        filesForApi["package.json"] = {
+          content: JSON.stringify(
+            {
+              name: info.repo,
+              description: "A CodeSandbox project",
+              main: "index.js", // A common default
+              scripts: {
+                start: "node index.js", // A common default
+              },
+              dependencies: {},
+            },
+            null,
+            2
+          ),
+          isBinary: false,
+        };
+      }
+
+      if (Object.keys(filesForApi).length === 0 && totalFiles > 0) {
+        throw new Error(
+          "Failed to fetch content for any of the files in the repository."
+        );
+      }
+
+      // --- Step 2: Call CodeSandbox Define API ---
+      setStatus("Creating CodeSandbox environment via API...");
+      const defineApiUrl =
+        "https://codesandbox.io/api/v1/sandboxes/define?json=1";
+      const apiResponse = await fetch(defineApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Placeholder for API key, replace with actual key retrieval
+          // Ensure this is done securely, ideally via a backend proxy
+          Authorization: `Bearer ${codesandboxApiKey}`,
+        },
+        body: JSON.stringify({ files: filesForApi }),
+      });
+
+      if (!apiResponse.ok) {
+        const errorBody = await apiResponse.text();
+        throw new Error(
+          `CodeSandbox API request failed (${apiResponse.status}): ${errorBody}`
+        );
+      }
+
+      const sandboxData = await apiResponse.json();
+      if (!sandboxData.sandbox_id) {
+        throw new Error("CodeSandbox API did not return a sandbox_id.");
+      }
+
+      const newEmbedUrl = `https://codesandbox.io/embed/${sandboxData.sandbox_id}`;
+      setSandboxEmbedUrl(newEmbedUrl);
+      console.log("CodeSandbox environment created. Embed URL:", newEmbedUrl);
+      setStatus("Repository loaded and CodeSandbox environment ready.");
+
+      // Keep the existing tree data for the file explorer, though CSB will manage its own file view
       const transformedData: Record<TreeItemIndex, TreeItem<FileTreeData>> = {
         root: {
           index: "root",
@@ -178,7 +316,6 @@ export default function RepoBrowser() {
       });
 
       setTreeData(transformedData);
-      setStatus("Repository loaded successfully.");
     } catch (error: any) {
       console.error("Error loading repository:", error);
       setStatus(`Error: ${error.message}`);
@@ -201,8 +338,17 @@ export default function RepoBrowser() {
 
   const handleFileSelect = (item: TreeItem<FileTreeData>) => {
     if (item && !item.isFolder) {
+      // If we are using CodeSandbox embed, selecting a file here might change the ?file= query param in the sandbox URL.
+      // For now, keep existing behavior, but this might need adjustment.
       setSelectedFile(item.data.path);
       setStatus(`Selected file: ${item.data.path}`);
+      if (repoInfo && defaultBranch && sandboxEmbedUrl) {
+        // Potentially update sandboxEmbedUrl to focus on the selected file
+        // e.g., by appending ?file=/path/to/file
+        // const parts = sandboxEmbedUrl.split('?');
+        // const baseEmbedUrl = parts[0];
+        // setSandboxEmbedUrl(`${baseEmbedUrl}?file=/${item.data.path}`);
+      }
     } else {
     }
   };
@@ -256,6 +402,7 @@ export default function RepoBrowser() {
                 selectedFile={selectedFile}
                 repoInfo={repoInfo}
                 defaultBranch={defaultBranch}
+                sandboxEmbedUrl={sandboxEmbedUrl}
               />
             </div>
           </div>

@@ -1,148 +1,102 @@
 "use client";
 
-import Editor from "@monaco-editor/react";
-// import * as monaco from "monaco-editor";
 import { useEffect, useState } from "react";
 
-// Configure Monaco Loader (optional, adjust path as needed)
-// loader.config({ monaco });
-
 interface FileViewerProps {
-  selectedFile: string | null;
+  selectedFile: string | null; // May become less relevant if CSB handles file navigation
   repoInfo: {
     user: string;
     repo: string;
   } | null;
   defaultBranch: string | null;
+  sandboxEmbedUrl: string | null; // New prop
 }
 
 export default function FileViewer({
-  selectedFile,
-  repoInfo,
-  defaultBranch,
+  selectedFile, // Keep for now, might be used to append ?file= to sandboxEmbedUrl
+  repoInfo, // Keep for context, though sandboxEmbedUrl is primary
+  defaultBranch, // Keep for context
+  sandboxEmbedUrl,
 }: FileViewerProps) {
-  const [fileContent, setFileContent] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [language, setLanguage] = useState<string>("plaintext");
+  const [currentEmbedUrl, setCurrentEmbedUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Determine language from file extension
-    if (selectedFile) {
-      const extension = selectedFile.split(".").pop()?.toLowerCase();
-      // Basic language mapping, can be expanded
-      switch (extension) {
-        case "js":
-        case "jsx":
-          setLanguage("javascript");
-          break;
-        case "ts":
-        case "tsx":
-          setLanguage("typescript");
-          break;
-        case "css":
-          setLanguage("css");
-          break;
-        case "html":
-          setLanguage("html");
-          break;
-        case "json":
-          setLanguage("json");
-          break;
-        case "md":
-          setLanguage("markdown");
-          break;
-        // Add more languages as needed
-        default:
-          setLanguage("plaintext");
+    if (sandboxEmbedUrl) {
+      // Attempt to add parameters for console/terminal view and dark theme.
+      // These are based on documentation and may need adjustment.
+      // `view=terminal` seems to be for their newer "Devbox" or "Repository" environments.
+      // `previewwindow=console` was for older sandboxes.
+      // `editorsize=0` to hide editor, `hidenavigation=1` to hide CodeSandbox UI nav if possible.
+      const params = new URLSearchParams();
+      params.set("theme", "dark");
+      // Try params for showing terminal/console and hiding editor/nav
+      params.set("view", "terminal"); // For newer CSB Repositories/DevBoxes
+      params.set("hidenavigation", "1");
+      // params.set("editorsize", "0"); // This might be too aggressive initially
+      // params.set("previewwindow", "console"); // Alternative for older sandbox devtools
+      // params.set("expanddevtools", "1"); // Another option for devtools
+      params.set("runonclick", "0"); // Auto-run the sandbox if possible
+
+      // If a file is selected, try to append it to the URL
+      // The base URL already includes the branch: /tree/branch
+      // So, we need to append the file path relative to the repo root.
+      // Example: https://codesandbox.io/embed/p/github/user/repo/tree/main?file=/src/App.js
+      if (selectedFile) {
+        params.set("file", `/${selectedFile}`);
       }
+
+      const urlWithParams = `${sandboxEmbedUrl}?${params.toString()}`;
+      setCurrentEmbedUrl(urlWithParams);
+      console.log("FileViewer will load CodeSandbox URL:", urlWithParams);
     } else {
-      setLanguage("plaintext");
+      setCurrentEmbedUrl(null);
     }
+  }, [sandboxEmbedUrl, selectedFile]);
 
-    async function fetchFileContent() {
-      if (!selectedFile || !repoInfo || !defaultBranch) {
-        setFileContent(null);
-        setError(null);
-        setIsLoading(false);
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      setFileContent(null);
-
-      try {
-        const rawUrl = `https://raw.githubusercontent.com/${repoInfo.user}/${repoInfo.repo}/${defaultBranch}/${selectedFile}`;
-
-        const response = await fetch(rawUrl);
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error(`File not found: ${selectedFile}`);
-          } else {
-            throw new Error(
-              `Failed to fetch file: ${response.status} ${response.statusText}`
-            );
-          }
-        }
-
-        const content = await response.text();
-        setFileContent(content);
-      } catch (err: any) {
-        console.error("Error fetching file content:", err);
-        setError(err.message || "Failed to fetch file content");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchFileContent();
-  }, [selectedFile, repoInfo, defaultBranch]);
-
-  if (!selectedFile) {
+  if (!currentEmbedUrl) {
     return (
-      <div className="file-viewer empty-state">
-        <p>Select a file to view its contents</p>
+      <div className="file-viewer empty-state flex items-center justify-center h-full">
+        <p className="text-gray-500">
+          {repoInfo
+            ? "Loading CodeSandbox environment..."
+            : "No repository loaded or CodeSandbox URL not available."}
+        </p>
       </div>
     );
   }
 
-  // Handle loading and error states before rendering editor
-  if (isLoading) {
-    return <div className="file-viewer loading">Loading file content...</div>;
-  }
-
-  if (error) {
-    return <div className="file-viewer error-message">Error: {error}</div>;
-  }
+  // The Monaco editor related states and logic are removed.
+  // const [fileContent, setFileContent] = useState<string | null>(null);
+  // const [isLoading, setIsLoading] = useState<boolean>(false);
+  // const [error, setError] = useState<string | null>(null);
+  // const [language, setLanguage] = useState<string>("plaintext");
+  // useEffect for fetching file content is removed.
 
   return (
-    <div className="file-viewer">
-      <div className="file-viewer-header">
-        <h3>{selectedFile}</h3>
-      </div>
+    <div className="file-viewer w-full h-full flex flex-col">
+      {/* Header can be simplified or removed if CSB provides enough context */}
+      {/* <div className="file-viewer-header p-2 border-b">
+        <h3>
+          {selectedFile
+            ? `Viewing: ${selectedFile}`
+            : "CodeSandbox Environment"}
+        </h3>
+      </div> */}
 
-      <div className="file-viewer-content monaco-editor-container p-0">
-        {/* Render Monaco Editor */}
-        {fileContent !== null ? (
-          <Editor
-            height="100%" // Use container height
-            language={language}
-            value={fileContent}
-            theme="vs-dark" // Or use 'light' or other themes
-            options={{
-              readOnly: false, // Allow editing
-              minimap: { enabled: true },
-              // Add other Monaco options as needed
-            }}
-            // Add onChange handler if you need to track edits
-            // onChange={(newValue) => console.log('Content changed:', newValue)}
-          />
-        ) : (
-          <div className="folder-message">
-            Could not load file content or file is empty.
-          </div>
-        )}
+      <div className="codesandbox-embed-container flex-grow w-full h-full p-0">
+        <iframe
+          src={currentEmbedUrl}
+          style={{
+            width: "100%",
+            height: "100%",
+            border: "0",
+            borderRadius: "4px",
+            overflow: "hidden",
+          }}
+          title={`CodeSandbox Environment - ${repoInfo?.repo}`}
+          allow="accelerometer; ambient-light-sensor; camera; encrypted-media; geolocation; gyroscope; hid; microphone; midi; payment; usb; vr; xr-spatial-tracking; clipboard-write; clipboard-read"
+          sandbox="allow-forms allow-modals allow-popups allow-presentation allow-same-origin allow-scripts allow-downloads"
+        ></iframe>
       </div>
     </div>
   );

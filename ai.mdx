@@ -1,9 +1,54 @@
-# AI Implementation Plan
+# AI Coding Assistant - CodeSandbox Integration Plan
 
-## AI Code Review Setup
+Our goal is to transform the existing GitHub repository browser into an AI-powered code editing environment using CodeSandbox. The aim is to provide a CLI-like experience for interacting with a GitHub repo without a full IDE.
 
-- [x] Create GitHub Actions workflow for AI code review using `qodo-ai/pr-agent`.
-- [x] Configure the workflow trigger, permissions, and action step.
-- [x] Add documentation about required secrets (`OPENAI_KEY`).
+## Key Objectives
 
-**Summary:** Created the `.github/workflows/ai-code-review.yml` workflow file using `qodo-ai/pr-agent`. The workflow runs on pull request events and requires an `OPENAI_KEY` secret.
+- Load a GitHub repository into an embedded CodeSandbox environment **using the CodeSandbox Define API**.
+- Display the CodeSandbox console/terminal for interaction.
+- Eventually, integrate an AI assistant to operate within this environment.
+
+## Plan
+
+1.  [x] **Research CodeSandbox API & Embedding:**
+    *   [x] Initial search for embedding GitHub repos and console access.
+    *   [x] Identified CodeSandbox Define API (`https://codesandbox.io/api/v1/sandboxes/define`) as the target for programmatic creation.
+    *   [ ] Verify how to default the embedded view to show the console/terminal (likely via URL parameters on the `embed/{sandbox_id}` URL).
+2.  [x] **Create `ai.mdx`:**
+    *   [x] This file, to track progress.
+3.  [ ] **Modify `RepoBrowser.tsx` (Client-Side API Integration - **Security Warning**):**
+    *   [ ] **Fetch All File Contents**: After fetching the repository tree, iterate through blob items and fetch their content from GitHub (e.g., using raw content URLs or GitHub Contents API).
+    *   [ ] **Prepare Define API Payload**: Construct the `files` object for the CodeSandbox Define API. Each entry should be `path: { content: "file_content_string" }`. (Assume text files for now, `isBinary` handling can be added).
+    *   [ ] **Make Define API Call**:
+        *   Perform a `POST` request to `https://codesandbox.io/api/v1/sandboxes/define?json=1`.
+        *   Include `Content-Type: application/json` and an `Authorization` header with the `CODESANDBOX_API_KEY`. **Note**: The API key (`process.env.NEXT_PUBLIC_CODESANDBOX_API_KEY`) will be exposed client-side. **This is a security risk and should be moved to a backend API route in production.**
+        *   Send the prepared `files` object in the request body.
+    *   [ ] **Process API Response**: On success, the API returns `{ "sandbox_id": "..." }`.
+    *   [ ] **Set Embed URL**: Update `sandboxEmbedUrl` state to `https://codesandbox.io/embed/{sandbox_id}`.
+    *   [ ] **Handle API Errors**: Implement error handling for both GitHub file fetching and CodeSandbox API calls.
+4.  [ ] **Modify `FileViewer.tsx`:**
+    *   [x] Already modified to accept `sandboxEmbedUrl` and render an iframe.
+    *   [ ] Ensure query parameters for console/terminal view (e.g., `view=terminal`, `theme=dark`) are correctly appended to the `embed/{sandbox_id}` URL.
+5.  [ ] **Console/Terminal Display:**
+    *   [ ] Test and confirm the embedded CodeSandbox (from `sandbox_id`) displays the console or terminal as expected with the chosen URL parameters.
+6.  [ ] **(Recommended) Secure API Key Handling:**
+    *   [ ] Create a Next.js API route (e.g., `/api/codesandbox-proxy`).
+    *   [ ] Move the CodeSandbox Define API call logic from `RepoBrowser.tsx` to this API route.
+    *   [ ] The client (`RepoBrowser.tsx`) will call this backend route, passing necessary info (like the GitHub repo files).
+    *   [ ] The API route will use the `CODESANDBOX_API_KEY` (stored as a server-side environment variable, e.g., `process.env.CODESANDBOX_API_KEY`) to securely call the CodeSandbox API.
+7.  [ ] **Error Handling and User Feedback:**
+    *   [ ] Enhance error handling for the multi-step process (GitHub fetching, CodeSandbox API).
+    *   [ ] Provide clear user feedback throughout.
+8.  [ ] **Future: AI Integration:**
+    *   [ ] Plan how the AI assistant will interact with the CodeSandbox environment.
+
+## Notes & Findings from Research:
+
+*   **Define API Endpoint:** `POST https://codesandbox.io/api/v1/sandboxes/define?json=1`
+*   **Define API Payload:** `{ "files": { "path/to/file.js": { "content": "...", "isBinary": false }, "image.png": { "content": "URL_to_binary_image", "isBinary": true } } }`
+    *   For non-binary files, direct content seems required.
+*   **API Key:** Likely used in `Authorization` header. Needs confirmation of exact scheme if not Bearer.
+*   **Embedding URL (Post-API):** `https://codesandbox.io/embed/{SANDBOX_ID}`
+*   **Console/Terminal in Embed:** Use query params like `view=terminal`, `expanddevtools=1`, `previewwindow=console`, `theme=dark`.
+
+**Security Warning:** Direct client-side usage of `CODESANDBOX_API_KEY` in `RepoBrowser.tsx` is a temporary step to fulfill the immediate request to use the API. This approach exposes the API key and is not secure for production. The recommended approach is to proxy the API call through a backend route (Step 6).
