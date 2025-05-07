@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { TreeItem, TreeItemIndex } from "react-complex-tree";
+import type { TreeItem, TreeItemIndex } from "react-complex-tree";
 import "../App.css";
-import FileTree, { FileTreeData } from "./FileTree";
+import type { FileTreeData } from "./FileTree";
+import FileTree from "./FileTree";
 import FileViewer from "./FileViewer";
 
 interface RepoInfo {
@@ -177,14 +178,20 @@ export default function RepoBrowser() {
         },
       };
 
-      treeResult.tree.forEach((item) => {
+      for (const item of treeResult.tree) {
         const pathParts = item.path.split("/");
         let currentPath = "";
+        let parentIndex = "root";
 
-        pathParts.forEach((part, index) => {
+        for (const [index, part] of pathParts.entries()) {
+          const previousPath = currentPath;
           currentPath = currentPath ? `${currentPath}/${part}` : part;
           const isLastPart = index === pathParts.length - 1;
           const itemIndex = currentPath;
+
+          if (index > 0) {
+            parentIndex = previousPath;
+          }
 
           if (!transformedData[itemIndex]) {
             const isFolder = isLastPart ? item.type === "tree" : true;
@@ -198,18 +205,24 @@ export default function RepoBrowser() {
               },
             };
 
-            const parentIndex =
-              index === 0 ? "root" : pathParts.slice(0, index).join("/");
             if (transformedData[parentIndex]?.children) {
               if (!transformedData[parentIndex].children!.includes(itemIndex)) {
                 transformedData[parentIndex].children!.push(itemIndex);
               }
-            } else {
+            } else if (parentIndex !== "root") {
+              // Avoid warning for root's direct children if pathParts is single
               console.warn(
                 `Parent node ${parentIndex} not found or missing children array for ${itemIndex}`
               );
+            } else if (
+              parentIndex === "root" &&
+              transformedData.root.children &&
+              !transformedData.root.children!.includes(itemIndex)
+            ) {
+              transformedData.root.children!.push(itemIndex);
             }
           } else {
+            // Existing item, ensure folder properties if it's a path segment or a tree item
             if (!isLastPart || item.type === "tree") {
               transformedData[itemIndex].isFolder = true;
               transformedData[itemIndex].data.type = "folder";
@@ -217,17 +230,28 @@ export default function RepoBrowser() {
                 transformedData[itemIndex].children = [];
               }
             }
-            const parentIndex =
-              index === 0 ? "root" : pathParts.slice(0, index).join("/");
+            // Ensure it's added to parent's children list if not already present
             if (
               transformedData[parentIndex]?.children &&
-              !transformedData[parentIndex].children!.includes(itemIndex)
+              !transformedData[parentIndex].children!.includes(itemIndex) &&
+              parentIndex !== itemIndex
             ) {
-              transformedData[parentIndex].children!.push(itemIndex);
+              if (
+                parentIndex === "root" &&
+                transformedData.root.children &&
+                !transformedData.root.children!.includes(itemIndex)
+              ) {
+                transformedData.root.children!.push(itemIndex);
+              } else if (
+                transformedData[parentIndex]?.children &&
+                !transformedData[parentIndex].children!.includes(itemIndex)
+              ) {
+                transformedData[parentIndex].children!.push(itemIndex);
+              }
             }
           }
-        });
-      });
+        }
+      }
 
       setTreeData(transformedData);
     } catch (error: any) {
