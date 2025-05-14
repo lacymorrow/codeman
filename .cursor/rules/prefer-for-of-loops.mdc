@@ -3,3 +3,38 @@ description:
 globs:
 alwaysApply: false
 ---
+```mdc-rule
+# Prefer for...of Loops
+
+**Glob:** `src/**/*.tsx`
+
+**Description:**
+When iterating over arrays and other iterable objects, prefer using `for...of` loops instead of `Array.prototype.forEach()`.
+
+**Example:**
+
+**Incorrect:**
+```typescript
+const myArray = [1, 2, 3];
+myArray.forEach(item => {
+  console.log(item);
+});
+```
+
+**Correct:**
+```typescript
+const myArray = [1, 2, 3];
+for (const item of myArray) {
+  console.log(item);
+}
+```
+
+**Rationale:**
+- `for...of` loops are generally more readable and align better with modern JavaScript syntax.
+- They work with any iterable, not just arrays.
+- They allow the use of `break` and `continue` for more flexible loop control.
+- They behave more predictably with `async/await` inside loops if you need to perform asynchronous operations sequentially for each item.
+
+**When `forEach` might still be acceptable:**
+- Very short, simple, synchronous operations where the conciseness of a one-liner arrow function is preferred and readability is not hampered.
+- When you specifically need access to the index and array itself within the callback and the `for...of` with `entries()` or manual indexing becomes more verbose.

@@ -3,3 +3,42 @@ description:
 globs:
 alwaysApply: false
 ---
+# TypeScript Type Imports
+
+**Glob:** `src/**/*.tsx`
+
+**Description:**
+To improve code clarity and potentially build times, always use `import type` when an import is only used for type annotations.
+
+**Example:**
+
+**Incorrect:**
+```typescript
+import { SomeType, anotherValue } from './my-module';
+
+function myFunction(param: SomeType) {
+  return anotherValue + 1;
+}
+```
+
+**Correct (if `SomeType` is only used as a type):**
+```typescript
+import type { SomeType } from './my-module';
+import { anotherValue } from './my-module';
+
+function myFunction(param: SomeType) {
+  return anotherValue + 1;
+}
+```
+
+**Correct (if all imports from a module are type-only):**
+```typescript
+import type { SomeType, AnotherType } from './my-module';
+
+function myFunction(param: SomeType, param2: AnotherType) {
+  // ...
+}
+```
+
+**Rationale:**
+This makes it explicit that an import does not introduce any runtime dependency, which can be helpful for build tools and static analysis.

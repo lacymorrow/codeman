@@ -43,6 +43,25 @@ export default function RepoBrowser() {
   const [devboxEmbedUrl, setDevboxEmbedUrl] = useState<string | null>(null);
   const [devboxId, setDevboxId] = useState<string | null>(null);
   const [isUniversalTemplate, setIsUniversalTemplate] = useState(false);
+  const [savedDevboxIds, setSavedDevboxIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Load saved devbox IDs from local storage on component mount
+    const storedIds = localStorage.getItem("savedDevboxIds");
+    if (storedIds) {
+      try {
+        const parsedIds = JSON.parse(storedIds);
+        if (Array.isArray(parsedIds)) {
+          setSavedDevboxIds(parsedIds);
+        }
+      } catch (error) {
+        console.error(
+          "Failed to parse savedDevboxIds from localStorage:",
+          error
+        );
+      }
+    }
+  }, []);
 
   const isValidGitHubUrl = (url: string) => {
     const githubRegex =
@@ -152,6 +171,22 @@ export default function RepoBrowser() {
       }
 
       setDevboxId(devboxData.id);
+
+      // Save the new devbox ID to local storage
+      try {
+        const currentSavedIds = [...savedDevboxIds];
+        if (!currentSavedIds.includes(devboxData.id)) {
+          currentSavedIds.push(devboxData.id);
+          localStorage.setItem(
+            "savedDevboxIds",
+            JSON.stringify(currentSavedIds)
+          );
+          setSavedDevboxIds(currentSavedIds); // Update state
+        }
+      } catch (error) {
+        console.error("Failed to save devbox ID to localStorage:", error);
+        // Optionally, inform the user that saving failed but the devbox was created
+      }
 
       // Check if this is a universal template
       setIsUniversalTemplate(
